@@ -1,0 +1,12 @@
+#!/bin/bash
+case "$1/$2" in
+    pre/*)
+        ;;
+    post/*)
+        /usr/local/bin/hidapitester --vidpid 0B05/19B6 --open --send-feature 70,1 --close 2>/dev/null
+        b=$(cut -d" " -f1 /var/lib/asus-kbd/state)
+        m=$(cut -d" " -f2 /var/lib/asus-kbd/state)
+        printf "0 $m 255 255 255 0\n" > /sys/class/leds/asus::kbd_backlight/kbd_rgb_mode
+        echo $b > /sys/class/leds/asus::kbd_backlight/brightness
+        ;;
+esac

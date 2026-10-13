@@ -13,6 +13,8 @@ echo "[2/4] Removing files..."
 sudo rm -f /etc/systemd/system/asus-kbd-backlight.service
 sudo rm -f /etc/systemd/system/asus-aura-daemon.service
 sudo rm -f /usr/local/bin/asus-aura-daemon
+sudo rm -f /usr/local/bin/hidapitester
+sudo rm -f /usr/lib/systemd/system-sleep/asus-kbd-sleep
 
 echo "[3/4] Removing state..."
 sudo rm -rf /var/lib/asus-kbd
