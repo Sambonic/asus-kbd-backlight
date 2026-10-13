@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 import evdev
-import os
+import logging
 import select
+import sys
 import time
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    stream=sys.stdout,
+)
+log = logging.getLogger('asus-aura-daemon')
 
 STATE_FILE = '/var/lib/asus-kbd/state'
 KBD_LED_PATH = '/sys/class/leds/asus::kbd_backlight'
@@ -11,13 +19,15 @@ MODES = [0, 1, 2]
 KEY_PROG4_CODE = 203
 
 def find_device():
+    log.info("Searching for %s...", DEVICE_NAME)
     while True:
         for path in evdev.list_devices():
             try:
                 d = evdev.InputDevice(path)
                 if DEVICE_NAME in d.name:
+                    log.info("Found %s at %s", d.name, d.path)
                     return d
-            except:
+            except OSError:
                 continue
         time.sleep(2)
 
@@ -26,14 +36,16 @@ def read_state():
         with open(STATE_FILE) as f:
             parts = f.read().strip().split()
             return int(parts[0]), int(parts[1])
-    except:
+    except Exception as e:
+        log.warning("Failed to read state file: %s, using defaults", e)
         return 3, 0
 
 def get_brightness():
     try:
         with open(f'{KBD_LED_PATH}/brightness') as f:
             return int(f.read().strip())
-    except:
+    except Exception as e:
+        log.warning("Failed to read brightness: %s, using 3", e)
         return 3
 
 def cycle_mode():
@@ -41,23 +53,35 @@ def cycle_mode():
     brightness = get_brightness()
     idx = MODES.index(current_mode) if current_mode in MODES else 0
     next_mode = MODES[(idx + 1) % len(MODES)]
-    with open(f'{KBD_LED_PATH}/kbd_rgb_mode', 'w') as f:
-        f.write(f'0 {next_mode} 255 255 255 0\n')
-    with open(f'{KBD_LED_PATH}/brightness', 'w') as f:
-        f.write(f'{brightness}\n')
-    with open(STATE_FILE, 'w') as f:
-        f.write(f"{brightness} {next_mode}\n")
+    try:
+        with open(f'{KBD_LED_PATH}/kbd_rgb_mode', 'w') as f:
+            f.write(f'0 {next_mode} 255 255 255 0\n')
+        with open(f'{KBD_LED_PATH}/brightness', 'w') as f:
+            f.write(f'{brightness}\n')
+        with open(STATE_FILE, 'w') as f:
+            f.write(f"{brightness} {next_mode}\n")
+        log.info("Mode cycled: %d -> %d (brightness %d)", current_mode, next_mode, brightness)
+    except Exception as e:
+        log.error("Failed to set mode %d: %s", next_mode, e)
 
 def main():
     kbd = find_device()
-    print(f"Monitoring {kbd.name} at {kbd.path}")
+    log.info("Monitoring for F4 (KEY_PROG4)")
 
     while True:
-        r, _, _ = select.select([kbd.fd], [], [], 1.0)
-        if r:
-            for event in kbd.read():
-                if event.type == 1 and event.code == KEY_PROG4_CODE and event.value == 1:
-                    cycle_mode()
+        try:
+            r, _, _ = select.select([kbd.fd], [], [], 1.0)
+            if r:
+                for event in kbd.read():
+                    if event.type == 1 and event.code == KEY_PROG4_CODE and event.value == 1:
+                        cycle_mode()
+        except OSError as e:
+            log.warning("Device lost: %s, reconnecting...", e)
+            try:
+                kbd.close()
+            except:
+                pass
+            kbd = find_device()
 
 if __name__ == '__main__':
     main()

@@ -9,6 +9,7 @@ Automated keyboard backlight control for ASUS TUF laptops on Ubuntu Linux.
 - **F2/F3**: Brightness down/up (works natively via asus-nb-wmi)
 - **F4 (Aura)**: Cycles through modes: Static → Breathe → Color Cycle → Static
 - **State persistence**: Saves brightness and mode across reboots
+- **Sleep/resume**: Re-initializes the keyboard controller after suspend
 
 ## Requirements
 
@@ -26,8 +27,8 @@ sudo ./install.sh
 
 The installer will:
 1. Install dependencies (git, build-essential, libhidapi-dev, python3-evdev)
-2. Build hidapitester
-3. Copy service files to correct locations
+2. Build hidapitester and install to `/usr/local/bin/`
+3. Copy service files and sleep/resume hook to correct locations
 4. Enable and start systemd services
 
 ## Uninstall
@@ -71,7 +72,32 @@ Speed: 0=slow, 1=medium, 2=fast (for breathe/cycle modes)
 ## Files
 
 - `asus-kbd-backlight.service` - Boot initialization service
+- `asus-kbd-sleep` - Sleep/resume hook that re-initializes controller after suspend
 - `asus-aura-daemon.service` - F4 mode cycler service
 - `asus-aura-daemon` - Python daemon that detects F4 (KEY_PROG4) and cycles modes
 - `install.sh` - One-click installer
 - `uninstall.sh` - Uninstaller
+
+## Troubleshooting
+
+Check daemon logs:
+```bash
+journalctl -u asus-aura-daemon -f
+```
+
+Check boot service logs:
+```bash
+journalctl -u asus-kbd-backlight
+```
+
+Check current state:
+```bash
+cat /var/lib/asus-kbd/state
+cat /sys/class/leds/asus::kbd_backlight/brightness
+```
+
+Restart services:
+```bash
+sudo systemctl restart asus-kbd-backlight
+sudo systemctl restart asus-aura-daemon
+```
