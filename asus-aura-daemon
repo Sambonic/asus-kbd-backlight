@@ -17,19 +17,22 @@ def read_state():
     except:
         return 3, 0
 
-def write_mode(mode):
-    brightness, _ = read_state()
-    with open(f'{KBD_LED_PATH}/kbd_rgb_mode', 'w') as f:
-        f.write(f'0 {mode} 255 255 255 0\n')
-    with open(f'{KBD_LED_PATH}/brightness', 'w') as f:
-        f.write(f'{brightness}\n')
-    return brightness
+def get_brightness():
+    try:
+        with open(f'{KBD_LED_PATH}/brightness') as f:
+            return int(f.read().strip())
+    except:
+        return 3
 
 def cycle_mode():
-    brightness, current_mode = read_state()
+    _, current_mode = read_state()
+    brightness = get_brightness()
     idx = MODES.index(current_mode) if current_mode in MODES else 0
     next_mode = MODES[(idx + 1) % len(MODES)]
-    write_mode(next_mode)
+    with open(f'{KBD_LED_PATH}/kbd_rgb_mode', 'w') as f:
+        f.write(f'0 {next_mode} 255 255 255 0\n')
+    with open(f'{KBD_LED_PATH}/brightness', 'w') as f:
+        f.write(f'{brightness}\n')
     with open(STATE_FILE, 'w') as f:
         f.write(f"{brightness} {next_mode}\n")
 
