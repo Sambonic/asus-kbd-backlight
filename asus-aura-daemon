@@ -2,12 +2,24 @@
 import evdev
 import os
 import select
+import time
 
-DEVICE_PATH = '/dev/input/event12'
 STATE_FILE = '/var/lib/asus-kbd/state'
 KBD_LED_PATH = '/sys/class/leds/asus::kbd_backlight'
+DEVICE_NAME = 'Asus WMI hotkeys'
 MODES = [0, 1, 2]
 KEY_PROG4_CODE = 203
+
+def find_device():
+    while True:
+        for path in evdev.list_devices():
+            try:
+                d = evdev.InputDevice(path)
+                if DEVICE_NAME in d.name:
+                    return d
+            except:
+                continue
+        time.sleep(2)
 
 def read_state():
     try:
@@ -37,7 +49,7 @@ def cycle_mode():
         f.write(f"{brightness} {next_mode}\n")
 
 def main():
-    kbd = evdev.InputDevice(DEVICE_PATH)
+    kbd = find_device()
     print(f"Monitoring {kbd.name} at {kbd.path}")
 
     while True:
