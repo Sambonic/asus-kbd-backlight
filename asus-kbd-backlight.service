@@ -1,6 +1,5 @@
 [Unit]
 Description=ASUS Keyboard Backlight Initialization
-After=multi-user.target
 
 [Service]
 Type=oneshot
