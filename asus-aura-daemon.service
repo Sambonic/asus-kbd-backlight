@@ -1,0 +1,13 @@
+[Unit]
+Description=ASUS Aura F4 Mode Cycler
+After=asus-kbd-backlight.service
+Requires=asus-kbd-backlight.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/asus-aura-daemon
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

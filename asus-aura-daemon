@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+import evdev
+import os
+import select
+
+DEVICE_PATH = '/dev/input/event12'
+STATE_FILE = '/var/lib/asus-kbd/state'
+KBD_LED_PATH = '/sys/class/leds/asus::kbd_backlight'
+MODES = [0, 1, 2]
+KEY_PROG4_CODE = 203
+
+def read_state():
+    try:
+        with open(STATE_FILE) as f:
+            parts = f.read().strip().split()
+            return int(parts[0]), int(parts[1])
+    except:
+        return 3, 0
+
+def write_mode(mode):
+    brightness, _ = read_state()
+    with open(f'{KBD_LED_PATH}/kbd_rgb_mode', 'w') as f:
+        f.write(f'0 {mode} 255 255 255 0\n')
+    with open(f'{KBD_LED_PATH}/brightness', 'w') as f:
+        f.write(f'{brightness}\n')
+    return brightness
+
+def cycle_mode():
+    brightness, current_mode = read_state()
+    idx = MODES.index(current_mode) if current_mode in MODES else 0
+    next_mode = MODES[(idx + 1) % len(MODES)]
+    write_mode(next_mode)
+    with open(STATE_FILE, 'w') as f:
+        f.write(f"{brightness} {next_mode}\n")
+
+def main():
+    kbd = evdev.InputDevice(DEVICE_PATH)
+    print(f"Monitoring {kbd.name} at {kbd.path}")
+
+    while True:
+        r, _, _ = select.select([kbd.fd], [], [], 1.0)
+        if r:
+            for event in kbd.read():
+                if event.type == 1 and event.code == KEY_PROG4_CODE and event.value == 1:
+                    cycle_mode()
+
+if __name__ == '__main__':
+    main()
